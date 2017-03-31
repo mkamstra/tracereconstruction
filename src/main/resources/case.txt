@@ -1,0 +1,84 @@
+﻿Case - Trace reconstruction from logs
+
+
+Each application in a microservice environment outputs some log describing the boundaries of an HTTP request, with the following format:
+
+
+[start-timestamp] [end-timestamp] [trace] [service-name] [caller-span]->[span]
+
+
+The trace ID is a random string that is passed along every service interaction. The first service (called from outside) generates the string and passes it to every other service it calls during the execution of the request. The called services take the trace (let’s say, from an HTTP header) and also pass it to the services the call themselves.
+
+
+The span ID is generated for every request. When a service calls another, it passes its own span ID to the callee. The callee will generate its own span ID, and using the span passed by the caller, log the last part of the line, that allows to connect the requests.
+
+
+So, a trace could look like this:
+
+
+2016-10-20 12:43:34.000 2016-10-20 12:43:35.000 trace1 back-end-3 ac->ad
+2016-10-20 12:43:33.000 2016-10-20 12:43:36.000 trace1 back-end-1 aa->ac
+2016-10-20 12:43:38.000 2016-10-20 12:43:40.000 trace1 back-end-2 aa->ab
+2016-10-20 12:43:32.000 2016-10-20 12:43:42.000 trace1 front-end null->aa
+
+
+Meaning that the “front-end” received a call from the outside (“null”), and assigned the span “aa” to the request. Then it called back-end-1, who assigned the span “ab”, who in turn called service “back-end-3”, who assign span “ac”. Then, “front-end” called “back-end-2”.
+
+
+The entries are logged when the request finishes (as they contain the finishing time), so they are not in calling order, but in finishing order. Moreover, as the collection mechanism is asynchronous, there is no guaranteed order at all. However, as the clock are reasonably synced, we can expect the finishing timestamps to be approximately ordered.
+
+
+Timestamps are un UTC.
+
+
+This execution trace can then be represented as:
+
+
+{“trace: “trace1”,
+“root”: {
+“service”: “front-end”,
+“start”: “2016-10-20 12:43:32.000”,
+“end”: “2016-10-20 12:43:42.000”,
+“calls”: [
+{“service”: “back-end-1”,
+“start”: “2016-10-20 12:43:33.000”,
+“end”: “2016-10-20 12:43:36.000”,
+“calls”: [
+{“service”: “back-end-3”,
+“start”: “2016-10-20 12:43:34.000”,
+“end”: “2016-10-20 12:43:35.000”}]},
+{“service”, “back-end-2”,
+“start”: “2016-10-20 12:43:38.000”,
+“end”: “2016-10-20 12:43:40.000”}
+]}}
+
+
+The task is to produce these JSON trees. That is, given a log file, output a JSON, one per line, for each trace.
+
+
+Details:
+* The program should be a Java (Scala is acceptable) program executable from the command line.
+* The input should be read from standard input
+* The output should be one JSON per line, written to standard output.
+* As the input file can be big (or potentially infinite), the output should be produced live; some buffering is of course allowed.
+* As said, there can be lines out of order.
+* There can be orphan lines (i.e., services with no corresponding root service); they should be tolerated but not included in the output (maybe summarized in stats, see below).
+* Lines can be malformed, they should be tolerated and ignored.
+
+
+Nice-to-haves:
+* A nice command-line interface, that allows to specify inputs and outputs from and to files.
+* Adaptive buffering size to the available heap memory.
+* Optionally report to standard error (or to a file), statistics about progress, lines consumed, line consumption rate, buffers, etc. Both at the end of the processing and during it.
+* Optionally report to standard error (or to a file), statistics about the traces themselves, like number of orphan requests, average size of traces, average depth, etc.
+
+
+Extras (optional):
+* As the file can be massive, do the processing using as many cores as the computer has.
+* Additionally to reading standard input, allow user of the program to “tail” an input file, as the Unix command does, that is, producing output while the input file grows.
+
+
+Note:
+Although logs can be mixed up a bit (just because enforcing FIFO semantics is hard in distributed setups), it is expected that the vast majority are only off for a few milliseconds. Additionally, this is about interactive web requests, which tend to be not too long. In short, there should be some reasonable, configurable timeout, after which the trace can be declared finished, so it can we written to the output. In the improvable case that some late entry comes afterwards, it should be treated like any orphan one. A reasonable "timeout" for the trace could be 30 seconds after the last entry.
+
+Example log and trace files are supplied, which would allow to test the program.

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="parser_log_filename">target/tracereconstruction.log</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <File name="FileOutput" fileName="${parser_log_filename}">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Logger name="nl.martijnkamstra.simscale.parser.LogParser" level="debug" additivity="true">
+            <AppenderRef ref="FileOutput"/>
+        </Logger>
+        <Root level="trace">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
