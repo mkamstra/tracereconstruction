@@ -1,8 +1,11 @@
 package nl.martijnkamstra.simscale.model;
 
+import nl.martijnkamstra.simscale.writer.JsonWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,26 +19,57 @@ public class TraceList {
      * A map suited for concurrency. It contains all the traces that have not been finished yet. Once finished they will
      * be printed and removed from this list
      */
-    ConcurrentHashMap<String, Trace> currentTraceList = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Trace> currentTraceList = new ConcurrentHashMap<>();
 
+    private LocalDateTime lastReceivedEventTime = LocalDateTime.MIN;
+
+    /**
+     * Add a trace element to the trace list. It will check if the trace id already exists. If not add it to the
+     * concurrent hashmap containing all active traces. Else update it.
+     * @param traceId The trace id the trace element is related to
+     * @param traceElement The trace element to be added
+     * @return true if the trace element was succesfully added.
+     */
     public boolean addTraceElement(String traceId, TraceElement traceElement) {
+        synchronized (lastReceivedEventTime) {
+            if (traceElement.getEndTimestamp().isAfter(lastReceivedEventTime))
+                lastReceivedEventTime = traceElement.getEndTimestamp();
+        }
+
+        boolean returnValue = false;
+
         if (!currentTraceList.containsKey(traceId)) {
             // A new trace
             Trace trace = new Trace(traceId);
             boolean added = trace.addTraceElement(traceElement);
-            // TODO: Remember that the trace needs to start with null!!!!
-            //TODO Remove following print statement
             boolean stored = storeTraceInMap(traceId, trace);
-            printTraceList();
-            return added && stored;
+            returnValue = added && stored;
         } else {
             // Trace exists already, so add the trace element to it
             Trace existingTrace = currentTraceList.get(traceId);
             boolean added = existingTrace.addTraceElement(traceElement);
             boolean stored = storeTraceInMap(traceId, existingTrace);
-            printTraceList();
-            return added && stored;
+            returnValue = added && stored;
         }
+
+        /**
+         * Check if any of the traces are complete (which is defined by not having received any events for a specified
+         * number of seconds) so they can be printed. Note that when no more events are received this is not invoked
+         * either but this is considered correct behaviour as none of those traces are already considered complete (or
+         * they would have been removed and printed before already)
+         */
+        currentTraceList.forEach((traceid, trace) -> {
+            long secondsSinceLastUpdate = ChronoUnit.SECONDS.between(trace.getLastTimeUpdated(), lastReceivedEventTime);
+            if (secondsSinceLastUpdate > 10) { //TODO: Make value configurable
+                Trace removedTrace = currentTraceList.remove(traceid);
+                if (removedTrace.getState() >= 2) // Has at least a head
+                    JsonWriter.printTraceAsJson(removedTrace);
+                else
+                    logger.error("The following trace has no root: " + trace);
+            }
+        });
+
+        return returnValue;
     }
 
     /**

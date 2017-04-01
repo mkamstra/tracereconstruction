@@ -5,49 +5,32 @@ import nl.martijnkamstra.simscale.model.TraceList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Scanner;
+import java.util.concurrent.Callable;
 
 /**
  * Created by Martijn Kamstra on 30/03/2017.
  */
-public class LogParser {
+public class LogParser implements Callable<String> {
 
     private static final Logger logger = LogManager.getLogger(LogParser.class);
 
-    TraceList traceList = new TraceList();
+    private TraceList traceList = new TraceList();
 
-    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME;
+    private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME;
+
+    private String fileName;
 
     /**
-     * Parse a log file with name pFileName. Note that the file could be VERY large and should therefore not entirely
-     * be loaded into memory. Instead the Java 8 Streams API is used to read (and process) the file line by line
-     * @param pFileName The name of the log file to be parsed
+     * @param fileName The name of the file that needs to be parsed
      */
-    public void parseLog(String pFileName) throws IOException {
-        ClassLoader classLoader = LogParser.class.getClassLoader();
-        InputStream fileStream = classLoader.getResourceAsStream(pFileName);
-        printMemoryUsage();
-        try (Scanner scanner = new Scanner(fileStream)) {
-            while (scanner.hasNext()) {
-                parseLine(scanner.nextLine());
-                //logger.debug(scanner.nextLine());
-                printMemoryUsage();
-            }
-            // note that Scanner suppresses exceptions
-            if (scanner.ioException() != null) {
-                logger.error("Scanner exception: ", scanner.ioException());
-            }
-        } finally {
-            if (fileStream != null) {
-                fileStream.close();
-            }
-        }
-        printMemoryUsage();
+    public LogParser(String fileName) {
+        this.fileName = fileName;
     }
 
     /**
@@ -90,5 +73,41 @@ public class LogParser {
         long total = Runtime.getRuntime().totalMemory() / 1000000;
         long used  = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000;
         System.out.println("Total memory (MB): " + total + ", used memory (MB): " + used);
+    }
+
+    /**
+     * Parse a log file with name fileName. Note that the file could be VERY large and should therefore not entirely
+     * be loaded into memory. Instead the Java 8 Streams API is used to read (and process) the file line by line
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public String call() throws Exception {
+        printMemoryUsage();
+        int counter = 0;
+        // BufferedReader is synchronized and has larger buffer than Scanner
+        try (BufferedReader reader = new BufferedReader(new FileReader("src/main/resources/" + fileName))) {
+            String line;
+            while (!Thread.currentThread().isInterrupted() && true) {
+                line = reader.readLine();
+                if (line == null) {
+                    // No input at the moment
+                    Thread.sleep(1000);
+                } else {
+                    parseLine(line);
+                    //logger.debug(scanner.nextLine());
+                    if (counter % 100 == 0)
+                        printMemoryUsage();
+                }
+            }
+
+        } catch (IOException ex) {
+            logger.error("Problem reading from log file: ", ex);
+        } catch (InterruptedException ex) {
+            logger.error("Problem waiting before checking for new contents: ", ex);
+            Thread.currentThread().interrupt();
+        }
+        printMemoryUsage();
+        return new String("Number of lines parsed: " + counter);
     }
 }
