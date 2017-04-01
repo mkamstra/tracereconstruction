@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijnkamstra.simscale.configuration.ConfigReader;
 import nl.martijnkamstra.simscale.configuration.Configuration;
 import nl.martijnkamstra.simscale.parser.LogParser;
+import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,12 +24,36 @@ public class TraceBuilder {
     }
 
     public static void main(String[] args) {
+        CommandLineParser commandLineParser = new DefaultParser();
+        Options options = new Options();
+        options.addOption("c", "configuration file", true, "JSON configuration file path (full or relative to the directory you are running from).");
+        options.addOption("h", "help", false, "Display usage instructions");
+        options.addOption("i", "input", true, "Input file path (full or relative to directory you are running from");
+        String configFileName = null;
+        String inputFileName = null;
+        try {
+            CommandLine line = commandLineParser.parse(options, args);
+            if (line.hasOption("c")) {
+                configFileName = line.getOptionValue("c");
+            }
+            if (line.hasOption("i")) {
+                inputFileName = line.getOptionValue("i");
+            }
+            if (line.hasOption("h")) {
+                printHelp(options);
+            }
+        } catch (ParseException ex) {
+            logger.fatal("Error parsing the arguments you provided: ", ex);
+            printHelp(options);
+            return;
+        }
+
         logger.debug("Reading json config file first");
-        configuration = ConfigReader.readConfig("config.json");
+        configuration = ConfigReader.readConfig(configFileName);
 
         logger.debug("Starting to parse log file");
         ExecutorService service = Executors.newFixedThreadPool(1);
-        LogParser logParser = new LogParser("log.txt");
+        LogParser logParser = new LogParser(inputFileName);
         Future<String> resultFuture = service.submit(logParser);
         String result = "";
         try {
@@ -45,5 +70,10 @@ public class TraceBuilder {
             System.out.println("Return value from log parser: " + result);
         }
         logger.debug("Finished parsing log file");
+    }
+
+    private static void printHelp(Options options) {
+        HelpFormatter helpFormatter = new HelpFormatter();
+        helpFormatter.printHelp("Trace Reconstruction", "Use a log file to reconstruct a trace file. A JSON file can be used to configure some of the parameters of the application.", options, "", true);
     }
 }

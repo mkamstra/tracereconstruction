@@ -24,6 +24,7 @@ public class LogParser implements Callable<String> {
 
     private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME;
 
+    // The name of the log file to parse including its path
     private String fileName;
 
     /**
@@ -85,8 +86,12 @@ public class LogParser implements Callable<String> {
     public String call() throws Exception {
         printMemoryUsage();
         int counter = 0;
+        if (fileName == null || fileName.length() == 0) {
+            logger.fatal("Input file name not specified");
+            throw new Exception("Input file name not specified");
+        }
         // BufferedReader is synchronized and has larger buffer than Scanner
-        try (BufferedReader reader = new BufferedReader(new FileReader("src/main/resources/" + fileName))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while (!Thread.currentThread().isInterrupted() && true) {
                 line = reader.readLine();
