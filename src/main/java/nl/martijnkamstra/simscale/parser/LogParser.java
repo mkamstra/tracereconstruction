@@ -73,7 +73,7 @@ public class LogParser implements Callable<String> {
     private static void printMemoryUsage() {
         long total = Runtime.getRuntime().totalMemory() / 1000000;
         long used  = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000;
-        //System.out.println("Total memory (MB): " + total + ", used memory (MB): " + used);
+        logger.info("Total memory (MB): " + total + ", used memory (MB): " + used);
     }
 
     /**

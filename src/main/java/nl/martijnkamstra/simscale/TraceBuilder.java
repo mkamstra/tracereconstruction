@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijnkamstra.simscale.configuration.ConfigReader;
 import nl.martijnkamstra.simscale.configuration.Configuration;
 import nl.martijnkamstra.simscale.parser.LogParser;
+import nl.martijnkamstra.simscale.writer.JsonWriter;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,8 +30,10 @@ public class TraceBuilder {
         options.addOption("c", "configuration file", true, "JSON configuration file path (full or relative to the directory you are running from).");
         options.addOption("h", "help", false, "Display usage instructions");
         options.addOption("i", "input", true, "Input file path (full or relative to directory you are running from");
+        options.addOption("o", "output", true, "Output file path (full or relative to directory you are running from");
         String configFileName = null;
         String inputFileName = null;
+        String outputFileName = null;
         try {
             CommandLine line = commandLineParser.parse(options, args);
             if (line.hasOption("c")) {
@@ -39,6 +42,11 @@ public class TraceBuilder {
             if (line.hasOption("i")) {
                 inputFileName = line.getOptionValue("i");
             }
+
+            if (line.hasOption("o")) {
+                outputFileName = line.getOptionValue("o");
+            }
+
             if (line.hasOption("h")) {
                 printHelp(options);
             }
@@ -52,6 +60,7 @@ public class TraceBuilder {
         configuration = ConfigReader.readConfig(configFileName);
 
         logger.debug("Starting to parse log file");
+        JsonWriter.setOutputFileName(outputFileName);
         ExecutorService service = Executors.newFixedThreadPool(1);
         LogParser logParser = new LogParser(inputFileName);
         Future<String> resultFuture = service.submit(logParser);
