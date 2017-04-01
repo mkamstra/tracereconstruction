@@ -1,5 +1,8 @@
 package nl.martijnkamstra.simscale;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.martijnkamstra.simscale.configuration.ConfigReader;
+import nl.martijnkamstra.simscale.configuration.Configuration;
 import nl.martijnkamstra.simscale.parser.LogParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +16,16 @@ import java.util.concurrent.*;
 public class TraceBuilder {
     private static final Logger logger = LogManager.getLogger(TraceBuilder.class);
 
+    private static Configuration configuration = null;
+
+    public static Configuration getConfiguration() {
+        return configuration;
+    }
+
     public static void main(String[] args) {
+        logger.debug("Reading json config file first");
+        configuration = ConfigReader.readConfig("config.json");
+
         logger.debug("Starting to parse log file");
         ExecutorService service = Executors.newFixedThreadPool(1);
         LogParser logParser = new LogParser("log.txt");
@@ -27,8 +39,6 @@ public class TraceBuilder {
             logger.error("Log parser execution interrrupted: ", ex);
         } catch (ExecutionException ex) {
             logger.error("Error getting result from log parser: ", ex);
-//        } catch (TimeoutException ex) {
-//            logger.error("Timeout error getting future result: ", ex);
         } finally {
             resultFuture.cancel(true);
             service.shutdownNow();

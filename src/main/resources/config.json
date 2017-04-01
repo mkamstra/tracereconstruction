@@ -1,0 +1,4 @@
+{
+  "traceFinishedTimeoutSec": 10,
+  "jsonPrettyPrintOutput" : true
+}

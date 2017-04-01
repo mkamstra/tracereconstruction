@@ -72,13 +72,13 @@ public class LogParser implements Callable<String> {
     private static void printMemoryUsage() {
         long total = Runtime.getRuntime().totalMemory() / 1000000;
         long used  = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000;
-        System.out.println("Total memory (MB): " + total + ", used memory (MB): " + used);
+        //System.out.println("Total memory (MB): " + total + ", used memory (MB): " + used);
     }
 
     /**
      * Parse a log file with name fileName. Note that the file could be VERY large and should therefore not entirely
      * be loaded into memory. Instead the Java 8 Streams API is used to read (and process) the file line by line
-     * @return
+     * @return A string containing the number of lines read
      * @throws Exception
      */
     @Override

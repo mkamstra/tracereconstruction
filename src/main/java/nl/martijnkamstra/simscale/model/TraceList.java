@@ -1,5 +1,6 @@
 package nl.martijnkamstra.simscale.model;
 
+import nl.martijnkamstra.simscale.TraceBuilder;
 import nl.martijnkamstra.simscale.writer.JsonWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,10 +59,11 @@ public class TraceList {
          * either but this is considered correct behaviour as none of those traces are already considered complete (or
          * they would have been removed and printed before already)
          */
-        currentTraceList.forEach((traceid, trace) -> {
+        int traceFinishedTimeoutSec = TraceBuilder.getConfiguration().getTraceFinishedTimeoutSec();
+        currentTraceList.forEach((trace_id, trace) -> {
             long secondsSinceLastUpdate = ChronoUnit.SECONDS.between(trace.getLastTimeUpdated(), lastReceivedEventTime);
-            if (secondsSinceLastUpdate > 10) { //TODO: Make value configurable
-                Trace removedTrace = currentTraceList.remove(traceid);
+            if (secondsSinceLastUpdate > traceFinishedTimeoutSec) {
+                Trace removedTrace = currentTraceList.remove(trace_id);
                 if (removedTrace.getState() >= 2) // Has at least a head
                     JsonWriter.printTraceAsJson(removedTrace);
                 else

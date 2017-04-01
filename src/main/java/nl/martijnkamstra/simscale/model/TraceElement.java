@@ -1,5 +1,12 @@
 package nl.martijnkamstra.simscale.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import nl.martijnkamstra.simscale.writer.LocalDateTimeSerializer;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,12 +15,21 @@ import java.util.List;
 /**
  * Created by Martijn Kamstra on 31/03/2017.
  */
+@JsonIgnoreProperties({"receivedSpanId"})
 public class TraceElement {
+    @JsonProperty("start")
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
     private LocalDateTime startTimestamp;
+    @JsonProperty("end")
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
     private LocalDateTime endTimestamp;
+    @JsonProperty("service")
     private String serviceName;
     private String receivedSpanId;
+    @JsonProperty("span")
     private String sentSpanId;
+    @JsonProperty("calls")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<TraceElement> childrenTraceElements = Collections.synchronizedList(new ArrayList<>()); // The traceElement(s) that have been called from this traceElement
 
     public TraceElement(LocalDateTime startTimestamp, LocalDateTime endTimestamp, String serviceName, String receivedSpanId, String sentSpanId) {

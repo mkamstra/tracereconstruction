@@ -1,5 +1,7 @@
 package nl.martijnkamstra.simscale.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -10,11 +12,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by Martijn Kamstra on 31/03/2017.
  */
+@JsonIgnoreProperties({"state", "lastTimeUpdated"})
 public class Trace {
     private static final Logger logger = LogManager.getLogger(Trace.class);
 
+    @JsonProperty("id")
     private String traceId = null;
     private AtomicInteger state = new AtomicInteger(0); // 0: empty trace; 1: in progress, no head yet; 2: one head, 3: multiple heads
+    @JsonProperty("root")
     private List<TraceElement> traceElements = Collections.synchronizedList(new ArrayList<>());
     private LocalDateTime lastTimeUpdated; // The last time the trace was updated based on trace event end times (needed for checking if trace finished using a timeout)
 
