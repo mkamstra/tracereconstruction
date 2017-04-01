@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijnkamstra.simscale.configuration.ConfigReader;
 import nl.martijnkamstra.simscale.configuration.Configuration;
 import nl.martijnkamstra.simscale.parser.LogParser;
+import nl.martijnkamstra.simscale.statistics.StatsReporter;
 import nl.martijnkamstra.simscale.writer.JsonWriter;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
@@ -64,11 +65,16 @@ public class TraceBuilder {
         ExecutorService service = Executors.newFixedThreadPool(1);
         LogParser logParser = new LogParser(inputFileName);
         Future<String> resultFuture = service.submit(logParser);
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
+        StatsReporter statsReporter = new StatsReporter();
+        ScheduledFuture statsFuture = scheduledExecutorService.scheduleAtFixedRate(statsReporter, 10, 10, TimeUnit.SECONDS);
         String result = "";
         try {
             result = resultFuture.get();
             service.shutdown();
             service.awaitTermination(10, TimeUnit.SECONDS);
+            scheduledExecutorService.shutdown();
+            scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
         } catch (InterruptedException ex) {
             logger.error("Log parser execution interrrupted: ", ex);
         } catch (ExecutionException ex) {
@@ -77,6 +83,8 @@ public class TraceBuilder {
             resultFuture.cancel(true);
             service.shutdownNow();
             System.out.println("Return value from log parser: " + result);
+            statsFuture.cancel(true);
+            scheduledExecutorService.shutdownNow();
         }
         logger.debug("Finished parsing log file");
     }

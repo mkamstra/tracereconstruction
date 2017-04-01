@@ -24,7 +24,7 @@ public class JsonWriter {
     // output
     private static ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED);
 
-    private static String outputFileName = null; 
+    private static String outputFileName = null;
 
     public static void setOutputFileName(String pOutputFileName) {
         outputFileName = pOutputFileName;

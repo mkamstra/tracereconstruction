@@ -2,6 +2,7 @@ package nl.martijnkamstra.simscale.parser;
 
 import nl.martijnkamstra.simscale.model.TraceElement;
 import nl.martijnkamstra.simscale.model.TraceList;
+import nl.martijnkamstra.simscale.statistics.StatsCollector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -44,6 +45,7 @@ public class LogParser implements Callable<String> {
         if (lineElements.length < 5) {
             logger.error("Line \"" + line + "\" not correct as it cannot be splitted into 5 elements using the space character, line ignored");
             // TODO: Possibly store the line somewhere
+            StatsCollector.addNumberOfIllegalLines(1);
             return;
         }
         try {
@@ -54,6 +56,7 @@ public class LogParser implements Callable<String> {
             String[] spanIds = lineElements[4].split("->");
             if (spanIds.length != 2) {
                 logger.error("Line \"" + line + "\" not correct as the span ids cannot be splitted into 2 elements using the -> character combination, line ignored");
+                StatsCollector.addNumberOfIllegalLines(1);
                 return;
             }
             String receivedSpanId = spanIds[0];
@@ -63,9 +66,12 @@ public class LogParser implements Callable<String> {
             if (!added) {
                 logger.error("Problem adding trace element to trace list for line " + line + " , line ignored");
                 return;
+            } else {
+                StatsCollector.addNumberOfLinesProcessed(1);
             }
         } catch (DateTimeParseException ex) {
             logger.error("Datetime of line " + line + " could not be parsed, line ignored: ", ex);
+            StatsCollector.addNumberOfIllegalLines(1);
         }
     }
 
@@ -90,6 +96,7 @@ public class LogParser implements Callable<String> {
             logger.fatal("Input file name not specified");
             throw new Exception("Input file name not specified");
         }
+        StatsCollector.setStartProcessingTime(System.nanoTime());
         // BufferedReader is synchronized and has larger buffer than Scanner
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;

@@ -1,6 +1,7 @@
 package nl.martijnkamstra.simscale.model;
 
 import nl.martijnkamstra.simscale.TraceBuilder;
+import nl.martijnkamstra.simscale.statistics.StatsCollector;
 import nl.martijnkamstra.simscale.writer.JsonWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,11 +64,18 @@ public class TraceList {
         currentTraceList.forEach((trace_id, trace) -> {
             long secondsSinceLastUpdate = ChronoUnit.SECONDS.between(trace.getLastTimeUpdated(), lastReceivedEventTime);
             if (secondsSinceLastUpdate > traceFinishedTimeoutSec) {
+                // Traces are old enough to be considered completed
                 Trace removedTrace = currentTraceList.remove(trace_id);
-                if (removedTrace.getState() >= 2) // Has at least a head
+                if (removedTrace.getState() >= 2) {
+                    // Has at least a head
                     JsonWriter.printTraceAsJson(removedTrace);
-                else
+                    StatsCollector.addNumberOfGeneratedCompleteTraces(1);
+                }
+                else {
+                    // Orphan trace
                     logger.error("The following trace has no root: " + trace);
+                    StatsCollector.addNumberOfOrphanRequests(1);
+                }
             }
         });
 

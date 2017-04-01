@@ -2,6 +2,7 @@
 <Configuration status="WARN">
     <Properties>
         <Property name="parser_log_filename">log/tracereconstruction.log</Property>
+        <Property name="stat_log_filename">log/statoutput.log</Property>
     </Properties>
 
     <Appenders>
@@ -11,10 +12,16 @@
         <File name="FileOutput" fileName="${parser_log_filename}">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </File>
+        <File name="StatOutput" fileName="${stat_log_filename}">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
     </Appenders>
     <Loggers>
         <Logger name="nl.martijnkamstra.simscale.parser.LogParser" level="debug" additivity="false">
             <AppenderRef ref="FileOutput"/>
+        </Logger>
+        <Logger name="nl.martijnkamstra.simscale.statistics.StatsReporter" level="debug" additivity="false">
+            <AppenderRef ref="StatOutput"/>
         </Logger>
         <Root level="trace">
             <AppenderRef ref="Console"/>
