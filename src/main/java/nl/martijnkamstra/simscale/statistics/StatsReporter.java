@@ -1,12 +1,7 @@
 package nl.martijnkamstra.simscale.statistics;
 
-import nl.martijnkamstra.simscale.TraceBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Callable;
 
 /**
  * Created by Martijn Kamstra on 01/04/2017.

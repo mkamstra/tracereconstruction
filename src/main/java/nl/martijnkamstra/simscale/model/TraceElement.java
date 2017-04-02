@@ -14,17 +14,26 @@ import java.util.List;
  */
 @JsonIgnoreProperties({"receivedSpanId"})
 public class TraceElement {
+    @JsonIgnore
+    private final Object lock;
+
+    @SuppressWarnings("all")
     @JsonProperty("start")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     private LocalDateTime startTimestamp;
+    @SuppressWarnings("all")
     @JsonProperty("end")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     private LocalDateTime endTimestamp;
+    @SuppressWarnings("all")
     @JsonProperty("service")
     private String serviceName;
+    @SuppressWarnings("all")
     private String receivedSpanId;
+    @SuppressWarnings("all")
     @JsonProperty("span")
     private String sentSpanId;
+    @SuppressWarnings("all")
     @JsonProperty("calls")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<TraceElement> childrenTraceElements = Collections.synchronizedList(new ArrayList<>()); // The traceElement(s) that have been called from this traceElement
@@ -35,15 +44,17 @@ public class TraceElement {
         this.serviceName = serviceName;
         this.receivedSpanId = receivedSpanId;
         this.sentSpanId = sentSpanId;
+        lock = new Object();
     }
 
     /**
      * Add a child traceElement to this traceElement, as it has been called from this
+     *
      * @param traceElement The child traceElement to add
      * @return whether the child was added
      */
     public boolean addChild(TraceElement traceElement) {
-        synchronized (childrenTraceElements) {
+        synchronized (lock) {
             if (traceElement.getReceivedSpanId().equalsIgnoreCase(sentSpanId)) {
                 return childrenTraceElements.add(traceElement);
             } else {
@@ -57,6 +68,7 @@ public class TraceElement {
         }
     }
 
+    @SuppressWarnings("unused")
     public LocalDateTime getStartTimestamp() {
         return startTimestamp;
     }
@@ -65,6 +77,7 @@ public class TraceElement {
         return endTimestamp;
     }
 
+    @SuppressWarnings("unused")
     public String getServiceName() {
         return serviceName;
     }
@@ -88,10 +101,10 @@ public class TraceElement {
 
     @Override
     public String toString() {
-        String childrenTraceElementsString = "";
-        synchronized (childrenTraceElementsString) {
+        StringBuilder childrenTraceElementsString = new StringBuilder("");
+        synchronized (lock) {
             for (TraceElement child : childrenTraceElements) {
-                childrenTraceElementsString += child.toString() + ", ";
+                childrenTraceElementsString.append(child.toString()).append(", ");
             }
             return "TraceElement{" +
                     "startTimestamp=" + startTimestamp +

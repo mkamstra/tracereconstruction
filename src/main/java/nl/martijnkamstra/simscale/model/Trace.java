@@ -17,9 +17,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Trace {
     private static final Logger logger = LogManager.getLogger(Trace.class);
 
+    @JsonIgnore
+    private final Object lock;
+
+    @SuppressWarnings("all")
     @JsonProperty("id")
     private String traceId = null;
+    @SuppressWarnings("all")
     private AtomicInteger state = new AtomicInteger(0); // 0: empty trace; 1: in progress, no head yet; 2: one head, 3: multiple heads
+
+    @SuppressWarnings("all")
     @JsonProperty("root")
     private List<TraceElement> traceElements = Collections.synchronizedList(new ArrayList<>());
     private LocalDateTime lastTimeUpdated; // The last time the trace was updated based on trace event end times (needed for checking if trace finished using a timeout)
@@ -28,11 +35,16 @@ public class Trace {
         this.traceId = traceId;
         state.set(0);
         lastTimeUpdated = LocalDateTime.MIN;
+        lock = new Object();
     }
 
     public LocalDateTime getLastTimeUpdated() {
-        synchronized (lastTimeUpdated) {
-            return lastTimeUpdated;
+        return lastTimeUpdated;
+    }
+
+    private void setLastTimeUpdated(LocalDateTime ldt) {
+        synchronized (lock) {
+            lastTimeUpdated = ldt;
         }
     }
 
@@ -41,10 +53,8 @@ public class Trace {
     }
 
     public boolean addTraceElement(TraceElement traceElement) {
-        synchronized (lastTimeUpdated) {
-            if (traceElement.getEndTimestamp().isAfter(lastTimeUpdated))
-                lastTimeUpdated = traceElement.getEndTimestamp();
-        }
+        if (traceElement.getEndTimestamp().isAfter(lastTimeUpdated))
+            setLastTimeUpdated(traceElement.getEndTimestamp());
 
         if (traceElement.getReceivedSpanId().equalsIgnoreCase("null")) {
             // A head was found (potentially there are multiple heads)
@@ -56,7 +66,7 @@ public class Trace {
             traceElements.add(0, traceElement);
             // Move the existing traceElements down if they are not heads. Note that an iterator is used as a for
             // each loop doesn't allow for safe removal of items
-            synchronized (traceElements) {
+            synchronized (lock) {
                 Iterator<TraceElement> traceElementIterator = traceElements.iterator();
                 while (traceElementIterator.hasNext()) {
                     TraceElement te = traceElementIterator.next();
@@ -78,7 +88,7 @@ public class Trace {
             state.set(1);
 
         // Check if any of the existing traceElements are a child of this traceElement and move them there
-        synchronized (traceElements) {
+        synchronized (lock) {
             Iterator<TraceElement> traceElementIterator = traceElements.iterator();
             while (traceElementIterator.hasNext()) {
                 TraceElement te = traceElementIterator.next();
@@ -115,10 +125,10 @@ public class Trace {
 
     @Override
     public String toString() {
-        String traceElementsString = "";
-        synchronized (traceElements) {
+        StringBuilder traceElementsString = new StringBuilder("");
+        synchronized (lock) {
             for (TraceElement traceElement : traceElements) {
-                traceElementsString += traceElement + ", ";
+                traceElementsString.append(traceElement).append(", ");
             }
             return "Trace{" +
                     "traceId='" + traceId + '\'' +

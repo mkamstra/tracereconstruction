@@ -17,28 +17,39 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TraceList {
     private static final Logger logger = LogManager.getLogger(TraceList.class);
 
+    private final Object lock;
+
     /**
      * A map suited for concurrency. It contains all the traces that have not been finished yet. Once finished they will
      * be printed and removed from this list
      */
+    @SuppressWarnings("all")
     private ConcurrentHashMap<String, Trace> currentTraceList = new ConcurrentHashMap<>();
 
     private LocalDateTime lastReceivedEventTime = LocalDateTime.MIN;
+
+    public TraceList() {
+        lock = new Object();
+    }
+
+    private void setLastReceivedEventTime(LocalDateTime ldt) {
+        synchronized (lock) {
+            lastReceivedEventTime = ldt;
+        }
+    }
 
     /**
      * Add a trace element to the trace list. It will check if the trace id already exists. If not add it to the
      * concurrent hashmap containing all active traces. Else update it.
      * @param traceId The trace id the trace element is related to
      * @param traceElement The trace element to be added
-     * @return true if the trace element was succesfully added.
+     * @return true if the trace element was successfully added.
      */
     public boolean addTraceElement(String traceId, TraceElement traceElement) {
-        synchronized (lastReceivedEventTime) {
-            if (traceElement.getEndTimestamp().isAfter(lastReceivedEventTime))
-                lastReceivedEventTime = traceElement.getEndTimestamp();
-        }
+        if (traceElement.getEndTimestamp().isAfter(lastReceivedEventTime))
+            setLastReceivedEventTime(traceElement.getEndTimestamp());
 
-        boolean returnValue = false;
+        boolean returnValue;
 
         if (!currentTraceList.containsKey(traceId)) {
             // A new trace
@@ -54,28 +65,30 @@ public class TraceList {
             returnValue = added && stored;
         }
 
-        /**
-         * Check if any of the traces are complete (which is defined by not having received any events for a specified
-         * number of seconds) so they can be printed. Note that when no more events are received this is not invoked
-         * either but this is considered correct behaviour as none of those traces are already considered complete (or
-         * they would have been removed and printed before already)
+        /*
+          Check if any of the traces are complete (which is defined by not having received any events for a specified
+          number of seconds) so they can be printed. Note that when no more events are received this is not invoked
+          either but this is considered correct behaviour as none of those traces are already considered complete (or
+          they would have been removed and printed before already)
          */
         int traceFinishedTimeoutSec = TraceBuilder.getConfiguration().getTraceFinishedTimeoutSec();
         currentTraceList.forEach((trace_id, trace) -> {
-            long secondsSinceLastUpdate = ChronoUnit.SECONDS.between(trace.getLastTimeUpdated(), lastReceivedEventTime);
-            if (secondsSinceLastUpdate > traceFinishedTimeoutSec) {
-                // Traces are old enough to be considered completed
-                Trace removedTrace = currentTraceList.remove(trace_id);
-                if (removedTrace.getState() >= 2) {
-                    // Has at least a head
-                    JsonWriter.printTraceAsJson(removedTrace);
-                    StatsCollector.addNumberOfGeneratedCompleteTraces(1);
-                    StatsCollector.addNumberOfTraceElementsInCompleteTraces(removedTrace.getSize());
-                }
-                else {
-                    // Orphan trace
-                    logger.error("The following trace has no root: " + trace);
-                    StatsCollector.addNumberOfOrphanRequests(1);
+            synchronized (lock) {
+                long secondsSinceLastUpdate = ChronoUnit.SECONDS.between(trace.getLastTimeUpdated(), lastReceivedEventTime);
+                if (secondsSinceLastUpdate > traceFinishedTimeoutSec) {
+                    // Traces are old enough to be considered completed
+                    Trace removedTrace = currentTraceList.remove(trace_id);
+                    if (removedTrace.getState() >= 2) {
+                        // Has at least a head
+                        JsonWriter.printTraceAsJson(removedTrace);
+                        StatsCollector.addNumberOfGeneratedCompleteTraces(1);
+                        StatsCollector.addNumberOfTraceElementsInCompleteTraces(removedTrace.getSize());
+                    }
+                    else {
+                        // Orphan trace
+                        logger.error("The following trace has no root: " + trace);
+                        StatsCollector.addNumberOfOrphanRequests(1);
+                    }
                 }
             }
         });
@@ -98,6 +111,7 @@ public class TraceList {
         }
     }
 
+    @SuppressWarnings("unused")
     private void printTraceList() {
         System.out.println("=============================================================================");
         for (Map.Entry<String, Trace> trace : currentTraceList.entrySet()) {

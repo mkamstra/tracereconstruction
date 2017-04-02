@@ -1,6 +1,5 @@
 package nl.martijnkamstra.simscale.writer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import nl.martijnkamstra.simscale.TraceBuilder;
@@ -8,9 +7,7 @@ import nl.martijnkamstra.simscale.model.Trace;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * Created by Martijn Kamstra on 01/04/2017.
@@ -22,7 +19,7 @@ public class JsonWriter {
     // of arrays. This is applicable to for example the root which has been configured in the code to potentially
     // consist of more than one element. But as this usually doesn't happen it avoids the array notation in the json
     // output
-    private static ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED);
+    private static final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED);
 
     private static String outputFileName = null;
 
@@ -31,10 +28,10 @@ public class JsonWriter {
     }
 
     public static void printTraceAsJson(Trace trace) {
-        FileWriter fileWriter = null;
+        Writer outputStreamWriter = null;
         BufferedWriter bufferedWriter = null;
         try {
-            String jsonTrace = null;
+            String jsonTrace;
             if (TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
                 jsonTrace = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(trace);
             } else {
@@ -43,27 +40,24 @@ public class JsonWriter {
             System.out.println(jsonTrace);
             if (outputFileName == null || outputFileName.length() == 0) {
                 logger.fatal("Output file name not specified, cannot print trace to file");
-                return;
             } else {
-                fileWriter = new FileWriter(outputFileName, true); // append
-                bufferedWriter = new BufferedWriter(fileWriter);
+                outputStreamWriter = new OutputStreamWriter(new FileOutputStream(outputFileName, true), "UTF-8"); // append
+                bufferedWriter = new BufferedWriter(outputStreamWriter);
                 if (TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
                     mapper.writerWithDefaultPrettyPrinter().writeValue(bufferedWriter, trace);
                 } else {
                     mapper.writeValue(bufferedWriter, trace);
                 }
             }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            logger.error("Problem writing to JSON: ", ex);
         } finally {
             try {
                 if (bufferedWriter != null)
                     bufferedWriter.close();
 
-                if (fileWriter != null)
-                    fileWriter.close();
+                if (outputStreamWriter != null)
+                    outputStreamWriter.close();
             } catch (IOException ex) {
                 logger.error("Error closing output JSON file for writing: ", ex);
             }

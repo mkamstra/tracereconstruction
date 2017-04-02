@@ -1,6 +1,5 @@
 package nl.martijnkamstra.simscale;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijnkamstra.simscale.configuration.ConfigReader;
 import nl.martijnkamstra.simscale.configuration.Configuration;
 import nl.martijnkamstra.simscale.parser.LogParser;
@@ -10,7 +9,6 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.util.concurrent.*;
 
 /**
@@ -76,7 +74,7 @@ public class TraceBuilder {
             scheduledExecutorService.shutdown();
             scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
         } catch (InterruptedException ex) {
-            logger.error("Log parser execution interrrupted: ", ex);
+            logger.error("Log parser execution interrupted: ", ex);
         } catch (ExecutionException ex) {
             logger.error("Error getting result from log parser: ", ex);
         } finally {

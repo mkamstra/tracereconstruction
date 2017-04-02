@@ -14,6 +14,7 @@ public class Configuration {
         return jsonPrettyPrintOutput;
     }
 
+    @SuppressWarnings("unused")
     public void setJsonPrettyPrintOutput(boolean jsonPrettyPrintOutput) {
         this.jsonPrettyPrintOutput = jsonPrettyPrintOutput;
     }
@@ -22,6 +23,7 @@ public class Configuration {
         return traceFinishedTimeoutSec;
     }
 
+    @SuppressWarnings("unused")
     public void setTraceFinishedTimeoutSec(int traceFinishedTimeoutSec) {
         this.traceFinishedTimeoutSec = traceFinishedTimeoutSec;
     }

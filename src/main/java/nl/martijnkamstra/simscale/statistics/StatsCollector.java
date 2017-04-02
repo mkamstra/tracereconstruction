@@ -1,6 +1,5 @@
 package nl.martijnkamstra.simscale.statistics;
 
-import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -10,30 +9,39 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class StatsCollector {
 
+    @SuppressWarnings("all")
     private static AtomicLong startProcessingTime = new AtomicLong(0);
-
+    @SuppressWarnings("all")
     private static AtomicLong numberOfLinesProcessed = new AtomicLong(0);
+    @SuppressWarnings("all")
     private static AtomicLong numberOfIllegalLines = new AtomicLong(0);
+    @SuppressWarnings("all")
     private static AtomicLong numberOfGeneratedCompleteTraces = new AtomicLong(0);
+    @SuppressWarnings("all")
     private static AtomicLong numberOfOrphanRequests = new AtomicLong(0);
+    @SuppressWarnings("all")
     private static AtomicLong numberOfTraceElementsInCompleteTraces = new AtomicLong(0);
 
     public static void setStartProcessingTime(long pStartProcessingTime) {
         startProcessingTime.set(pStartProcessingTime);
     }
 
+    @SuppressWarnings("all")
     public static void addNumberOfLinesProcessed(long pNumberOfLinesProcessed) {
         numberOfLinesProcessed.set(numberOfLinesProcessed.get() + pNumberOfLinesProcessed);
     }
 
+    @SuppressWarnings("all")
     public static void addNumberOfIllegalLines(long pNumberOfIllegalLines) {
         numberOfIllegalLines.set(numberOfIllegalLines.get() + pNumberOfIllegalLines);
     }
 
+    @SuppressWarnings("all")
     public static void addNumberOfGeneratedCompleteTraces(long pNumberOfGeneratedCompleteTraces) {
         numberOfGeneratedCompleteTraces.set(numberOfGeneratedCompleteTraces.get() + pNumberOfGeneratedCompleteTraces);
     }
 
+    @SuppressWarnings("all")
     public static void addNumberOfOrphanRequests(long pNumberOfOrphanRequests) {
         numberOfOrphanRequests.set(numberOfOrphanRequests.get() + pNumberOfOrphanRequests);
     }
