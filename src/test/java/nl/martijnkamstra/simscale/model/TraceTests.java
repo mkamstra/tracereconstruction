@@ -52,4 +52,63 @@ public class TraceTests {
         rootElement.addChild(parentElement);
         assertEquals("Size of trace element is not correct", 4, rootElement.getSize());
     }
+
+    @Test
+    public void testTraceWithRoot() {
+        parentElement.addChild(childElement1);
+        parentElement.addChild(childElement2);
+        rootElement.addChild(parentElement);
+        Trace trace = new Trace("kfhjgjkf");
+        trace.addTraceElement(rootElement);
+        assertEquals("Size of trace element is not correct", 4, rootElement.getSize());
+        assertEquals("Trace state is not correct", 2, trace.getState());
+    }
+
+    @Test
+    public void testTraceWithoutRoot() {
+        parentElement.addChild(childElement1);
+        parentElement.addChild(childElement2);
+        Trace trace = new Trace("kfhjgjkf");
+        assertEquals("Trace state is not correct", 0, trace.getState());
+        trace.addTraceElement(parentElement);
+        assertEquals("Size of trace element is not correct", 3, parentElement.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        assertEquals("Trace size is not correct", 3, trace.getSize());
+    }
+
+    @Test
+    public void testTraceWithRootAddElementsInDifferentOrder() {
+        Trace trace = new Trace("kfhjgjkf");
+        assertEquals("Trace state is not correct", 0, trace.getState());
+        trace.addTraceElement(childElement1);
+        assertEquals("Size of trace element is not correct", 1, trace.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        trace.addTraceElement(childElement2);
+        assertEquals("Size of trace element is not correct", 2, trace.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        trace.addTraceElement(parentElement);
+        assertEquals("Size of trace element is not correct", 3, trace.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        assertEquals("Size of trace element is not correct", 3, parentElement.getSize());
+        trace.addTraceElement(rootElement);
+        assertEquals("Size of trace element is not correct", 4, trace.getSize());
+        assertEquals("Trace state is not correct", 2, trace.getState());
+        assertEquals("Size of trace element is not correct", 4, rootElement.getSize());
+    }
+
+    @Test
+    public void testTraceWithRootWithNoDirectChildren() { // Parent element should be missing
+        Trace trace = new Trace("kfhjgjkf");
+        assertEquals("Trace state is not correct", 0, trace.getState());
+        trace.addTraceElement(childElement1);
+        assertEquals("Size of trace element is not correct", 1, trace.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        trace.addTraceElement(childElement2);
+        assertEquals("Size of trace element is not correct", 2, trace.getSize());
+        assertEquals("Trace state is not correct", 1, trace.getState());
+        trace.addTraceElement(rootElement);
+        assertEquals("Size of trace element is not correct", 3, trace.getSize());
+        assertEquals("Trace state is not correct", 2, trace.getState());
+        assertEquals("Size of trace element is not correct", 1, rootElement.getSize());
+    }
 }

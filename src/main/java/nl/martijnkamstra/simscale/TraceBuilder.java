@@ -63,7 +63,7 @@ public class TraceBuilder {
         ExecutorService service = Executors.newFixedThreadPool(1);
         LogParser logParser = new LogParser(inputFileName);
         Future<String> resultFuture = service.submit(logParser);
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         StatsReporter statsReporter = new StatsReporter();
         ScheduledFuture statsFuture = scheduledExecutorService.scheduleAtFixedRate(statsReporter, 10, 10, TimeUnit.SECONDS);
         String result = "";
