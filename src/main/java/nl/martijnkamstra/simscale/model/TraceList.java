@@ -70,6 +70,7 @@ public class TraceList {
                     // Has at least a head
                     JsonWriter.printTraceAsJson(removedTrace);
                     StatsCollector.addNumberOfGeneratedCompleteTraces(1);
+                    StatsCollector.addNumberOfTraceElementsInCompleteTraces(removedTrace.getSize());
                 }
                 else {
                     // Orphan trace

@@ -16,6 +16,7 @@ public class StatsCollector {
     private static AtomicLong numberOfIllegalLines = new AtomicLong(0);
     private static AtomicLong numberOfGeneratedCompleteTraces = new AtomicLong(0);
     private static AtomicLong numberOfOrphanRequests = new AtomicLong(0);
+    private static AtomicLong numberOfTraceElementsInCompleteTraces = new AtomicLong(0);
 
     public static void setStartProcessingTime(long pStartProcessingTime) {
         startProcessingTime.set(pStartProcessingTime);
@@ -37,6 +38,10 @@ public class StatsCollector {
         numberOfOrphanRequests.set(numberOfOrphanRequests.get() + pNumberOfOrphanRequests);
     }
 
+    public static void addNumberOfTraceElementsInCompleteTraces(long pNumberOfTraceElementsInCompleteTraces) {
+        numberOfTraceElementsInCompleteTraces.set(numberOfTraceElementsInCompleteTraces.get() + pNumberOfTraceElementsInCompleteTraces);
+    }
+
     public static long getStartProcessingTime() {
         return startProcessingTime.get();
     }
@@ -55,5 +60,9 @@ public class StatsCollector {
 
     public static long getNumberOfOrphanRequests() {
         return numberOfOrphanRequests.get();
+    }
+
+    public static long getNumberOfTraceElementsInCompleteTraces() {
+        return numberOfTraceElementsInCompleteTraces.get();
     }
 }

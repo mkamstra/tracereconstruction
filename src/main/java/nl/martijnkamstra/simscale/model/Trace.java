@@ -1,5 +1,6 @@
 package nl.martijnkamstra.simscale.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.logging.log4j.LogManager;
@@ -101,6 +102,15 @@ public class Trace {
             // a head is received of course
             return traceElements.add(traceElement);
         }
+    }
+
+    @JsonIgnore
+    public int getSize() {
+        int size = 0;
+        for (TraceElement te : traceElements) {
+            size += te.getSize();
+        }
+        return size;
     }
 
     @Override

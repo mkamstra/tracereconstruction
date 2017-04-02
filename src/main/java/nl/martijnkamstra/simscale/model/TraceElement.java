@@ -1,9 +1,6 @@
 package nl.martijnkamstra.simscale.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import nl.martijnkamstra.simscale.writer.LocalDateTimeSerializer;
 
@@ -78,6 +75,15 @@ public class TraceElement {
 
     public String getSentSpanId() {
         return sentSpanId;
+    }
+
+    @JsonIgnore
+    public int getSize() {
+        int size = 1;
+        for (TraceElement te : childrenTraceElements) {
+            size += te.getSize();
+        }
+        return size;
     }
 
     @Override
