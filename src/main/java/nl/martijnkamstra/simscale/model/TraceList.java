@@ -8,6 +8,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +20,8 @@ public class TraceList {
     private static final Logger logger = LogManager.getLogger(TraceList.class);
 
     private final Object lock;
+    
+    private List<String> traceIdsWrittenToFile = new ArrayList<>();
 
     /**
      * A map suited for concurrency. It contains all the traces that have not been finished yet. Once finished they will
@@ -36,6 +40,10 @@ public class TraceList {
         synchronized (lock) {
             lastReceivedEventTime = ldt;
         }
+    }
+    
+    public List<String> getTraceIdsWrittenToFile() {
+    	return traceIdsWrittenToFile;
     }
 
     /**
@@ -83,6 +91,7 @@ public class TraceList {
                         JsonWriter.printTraceAsJson(removedTrace);
                         StatsCollector.addNumberOfGeneratedCompleteTraces(1);
                         StatsCollector.addNumberOfTraceElementsInCompleteTraces(removedTrace.getSize());
+                        traceIdsWrittenToFile.add(trace_id);
                     }
                     else {
                         // Orphan trace
@@ -94,6 +103,30 @@ public class TraceList {
         });
 
         return returnValue;
+    }
+    
+    /**
+     * Check when the file parsing has been completed which traces are also complete (based on state) and can be written to file.
+     */
+    public void checkTraceListWhenFileParsingIsFinished() {
+        currentTraceList.forEach((trace_id, trace) -> {
+            synchronized (lock) {
+                // Traces are old enough to be considered completed
+                Trace removedTrace = currentTraceList.remove(trace_id);
+                if (removedTrace.getState() >= 2) {
+                    // Has at least a head
+                    JsonWriter.printTraceAsJson(removedTrace);
+                    StatsCollector.addNumberOfGeneratedCompleteTraces(1);
+                    StatsCollector.addNumberOfTraceElementsInCompleteTraces(removedTrace.getSize());
+                    traceIdsWrittenToFile.add(trace_id);
+                }
+                else {
+                    // Orphan trace
+                    logger.error("The following trace has no root: " + trace);
+                    StatsCollector.addNumberOfOrphanRequests(1);
+                }
+            }
+        });
     }
 
     /**

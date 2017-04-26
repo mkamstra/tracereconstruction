@@ -10,6 +10,9 @@ import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -23,9 +26,11 @@ public class LogParser implements Callable<String> {
     private TraceList traceList = new TraceList();
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME;
-
+    
     // The name of the log file to parse including its path
     private final String fileName;
+    
+    private List<String> parsedTraceIds = new ArrayList<>();
 
     /**
      * @param fileName The name of the file that needs to be parsed
@@ -39,12 +44,12 @@ public class LogParser implements Callable<String> {
      * 2013-10-23T10:13:05.076Z 2013-10-23T10:13:05.078Z ouvyulux service1 lydof6z2->3shf5olz
      * @param line The string to be parsed
      */
-    private void parseLine(String line) {
+    private String parseLine(String line) {
         String[] lineElements = line.split(" "); // Space is separation character in line
         if (lineElements.length < 5) {
             logger.error("Line \"" + line + "\" not correct as it cannot be split into 5 elements using the space character, line ignored");
             StatsCollector.addNumberOfIllegalLines(1);
-            return;
+            return null;
         }
         try {
             LocalDateTime startTime = LocalDateTime.parse(lineElements[0], dateTimeFormatter);
@@ -55,7 +60,7 @@ public class LogParser implements Callable<String> {
             if (spanIds.length != 2) {
                 logger.error("Line \"" + line + "\" not correct as the span ids cannot be split into 2 elements using the -> character combination, line ignored");
                 StatsCollector.addNumberOfIllegalLines(1);
-                return;
+                return null;
             }
             String receivedSpanId = spanIds[0];
             String sentSpanId = spanIds[1];
@@ -66,10 +71,13 @@ public class LogParser implements Callable<String> {
             } else {
                 StatsCollector.addNumberOfLinesProcessed(1);
             }
+            return traceId;
         } catch (DateTimeParseException ex) {
             logger.error("Datetime of line " + line + " could not be parsed, line ignored: ", ex);
             StatsCollector.addNumberOfIllegalLines(1);
         }
+        
+        return null;
     }
 
 
@@ -88,7 +96,8 @@ public class LogParser implements Callable<String> {
     @Override
     public String call() throws Exception {
         printMemoryUsage();
-        int counter = 0;
+        int nrOfLinesParsed = 0;
+        int nrOfRootsParsed = 0;
         if (fileName == null || fileName.length() == 0) {
             logger.fatal("Input file name not specified");
             throw new Exception("Input file name not specified");
@@ -97,16 +106,25 @@ public class LogParser implements Callable<String> {
         // BufferedReader is synchronized and has larger buffer than Scanner
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF-8"))) {
             String line;
-            while (!Thread.currentThread().isInterrupted()) {
-                line = reader.readLine();
+            int waitcounter = 0;
+            while (!Thread.currentThread().isInterrupted() && waitcounter < 10) {
+                line = reader.readLine(); // Reading is sequential so parallelization is not very useful here
                 if (line == null) {
                     // No input at the moment
                     Thread.sleep(1000);
+                    waitcounter++;
                 } else {
-                    parseLine(line);
+                    String traceId = parseLine(line);
+                    nrOfLinesParsed++;
+                    if (line.contains("null")) {
+                    	nrOfRootsParsed++;
+                    	if (traceId != null) {
+                    		parsedTraceIds.add(traceId);
+                    	}
+                    }
                     //logger.debug(scanner.nextLine());
-                    if (counter % 100 == 0)
-                        printMemoryUsage();
+//                    if (nrOfLinesParsed % 100 == 0)
+//                        printMemoryUsage();
                 }
             }
 
@@ -117,6 +135,17 @@ public class LogParser implements Callable<String> {
             Thread.currentThread().interrupt();
         }
         printMemoryUsage();
-        return "Number of lines parsed: " + counter;
+
+        // There might still be some elements in the tracelist which are already complete. Now that the file has been finished parsing we can check for those
+        traceList.checkTraceListWhenFileParsingIsFinished();
+        
+        System.out.println("Number of root elements parsed: " + parsedTraceIds.size());
+		//System.out.println(Arrays.toString(parsedTraceIds.toArray()));
+        List<String> traceIdsWrittenToFile = traceList.getTraceIdsWrittenToFile();
+        System.out.println("Number of traces written to file: " + traceIdsWrittenToFile.size());
+        //System.out.println(Arrays.toString(traceIdsWrittenToFile.toArray()));
+        
+
+        return "Number of lines parsed: " + nrOfLinesParsed + ", number of roots parsed: " + nrOfRootsParsed;
     }
 }

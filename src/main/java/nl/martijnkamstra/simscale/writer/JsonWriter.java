@@ -29,7 +29,6 @@ public class JsonWriter {
 
     public static void printTraceAsJson(Trace trace) {
         Writer outputStreamWriter = null;
-        BufferedWriter bufferedWriter = null;
         try {
             String jsonTrace;
             if (TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
@@ -42,20 +41,28 @@ public class JsonWriter {
                 logger.fatal("Output file name not specified, cannot print trace to file");
             } else {
                 outputStreamWriter = new OutputStreamWriter(new FileOutputStream(outputFileName, true), "UTF-8"); // append
-                bufferedWriter = new BufferedWriter(outputStreamWriter);
-                if (TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
-                    mapper.writerWithDefaultPrettyPrinter().writeValue(bufferedWriter, trace);
-                } else {
-                    mapper.writeValue(bufferedWriter, trace);
+                try (BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter)) {
+                	if (TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
+                		mapper.writerWithDefaultPrettyPrinter().writeValue(bufferedWriter, trace);
+                	} else {
+                		mapper.writeValue(bufferedWriter, trace); // closes the buffered writer and output stream writer
+                	}
+                } catch (Exception ex) {
+                	logger.error("Error writing a trace to file: ", ex);
                 }
-            }
+                // Add a newline to the case of not pretty print (poor temp code as this should be handled by settings in ObjectMapper instead)
+                try (BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFileName, true), "UTF-8"))) {
+                	if (!TraceBuilder.getConfiguration().isJsonPrettyPrintOutput()) {
+                		bufferedWriter.append('\n');
+                	}
+                } catch (Exception ex) {
+                	logger.error("Error writing newline character a trace to file: ", ex);
+                }
+            }	
         } catch (IOException ex) {
             logger.error("Problem writing to JSON: ", ex);
         } finally {
             try {
-                if (bufferedWriter != null)
-                    bufferedWriter.close();
-
                 if (outputStreamWriter != null)
                     outputStreamWriter.close();
             } catch (IOException ex) {
